@@ -1,171 +1,138 @@
 rm(list=ls())
 
 library(tidyverse)
+library(compare)
 
-men   <- c(paste0('M', 1:12))
+men   <- paste0('m', 1:12)
+women <- paste0('f', 1:12)
 
-women <- c(paste0('F', 1:12))
+men_satisfied <- 'N'
+women_satisfied <- 'N'
 
-men_history <- tibble(men = men,
-                      partner1 = NA,
-                      partner2 = NA,
-                      partner3 = NA,
-                      opposition1 = NA,
-                      opposition1a = NA,
-                      opposition2 = NA,
-                      opposition2a = NA,
-                      opposition3 = NA,
-                      opposition3a = NA)
+iteration <- 1
 
-women_history <- tibble(women = women,
-                      partner1 = NA,
-                      partner2 = NA,
-                      partner3 = NA,
-                      opposition1 = NA,
-                      opposition1a = NA,
-                      opposition2 = NA,
-                      opposition2a = NA,
-                      opposition3 = NA,
-                      opposition3a = NA)
+while (men_satisfied == 'N' | women_satisfied == 'N') {
 
-# session one
-while (length(men) > 0 & length(women) > 0) {
-  
-  man1   <- sample(men, 1)
-  woman1 <- sample(women, 1)
-  
-  men   <- men[men != man1]
-  women <- women[women != woman1]
-  
-  man2   <- sample(men, 1)
-  woman2 <- sample(women, 1)
-  
-  men   <- men[men != man2]
-  women <- women[women != woman2]
-  
-  # record partners
-  men_history[men_history$men == man1,'partner1'] <- man2
-  men_history[men_history$men == man2,'partner1'] <- man1
-  
-  women_history[women_history$women == woman1,'partner1'] <- woman2
-  women_history[women_history$women == woman2,'partner1'] <- woman1
-  
-  # record oppositions
-  men_history[men_history$men == man1,'opposition1']  <- woman1
-  men_history[men_history$men == man1,'opposition1a'] <- woman2
-  
-  men_history[men_history$men == man2,'opposition1']  <- woman1
-  men_history[men_history$men == man2,'opposition1a'] <- woman2
-  
-  women_history[women_history$women == woman1,'opposition1'] <- man1
-  women_history[women_history$women == woman1,'opposition1a'] <- man2
-  
-  women_history[women_history$women == woman2,'opposition1'] <- man1
-  women_history[women_history$women == woman2,'opposition1a'] <- man2
-  
-  print(paste(man1, '&', man2))
-  print(paste(woman1, '&', woman2))
-  
-  rm(man1, man2, woman1, woman2)
-  
+partners_draw <- tibble(game = c(rep(1, 12),rep(2,12), rep(3,12)),
+                  man = rep(men,3),
+                  woman = c(sample(women), sample(women), sample(women))) %>%
+                  arrange(game, man, woman)
+
+
+while (nrow(distinct_all(partners_draw)) != 36) {
+  partners_draw <- tibble(game = c(rep(1, 12),rep(2,12), rep(3,12)),
+                          man = rep(men,3),
+                          woman = c(sample(women), sample(women), sample(women))) %>%
+                          arrange(game, man, woman)
 }
 
-# All back into the hat
-men   <- c(paste0('M', 1:12))
-women <- c(paste0('F', 1:12))
+### Opposition one
 
-# session two
-while (length(men) > 0 & length(women) > 0) {
-  man1   <- sample(men, 1)
-  woman1 <- sample(women, 1)
-  
-  men   <- men[men != man1]
-  women <- women[women != woman1]
-  
-  # Here. When sample, exclude the previous partner
-  man2   <- sample(men[men != men_history[men_history$men == man1,]$partner1], 1)
-  woman2 <- sample(women[women != women_history[women_history$women == woman1,]$partner1], 1)
-  
-  men   <- men[men != man2]
-  women <- women[women != woman2]
-  
-  # record partners
-  men_history[men_history$men == man1,'partner2'] <- man2
-  men_history[men_history$men == man2,'partner2'] <- man1
-  
-  women_history[women_history$women == woman1,'partner2'] <- woman2
-  women_history[women_history$women == woman2,'partner2'] <- woman1
-  
-  # record oppositions
-  men_history[men_history$men == man1,'opposition2']  <- woman1
-  men_history[men_history$men == man1,'opposition2a'] <- woman2
-  
-  men_history[men_history$men == man2,'opposition2']  <- woman1
-  men_history[men_history$men == man2,'opposition2a'] <- woman2
-  
-  women_history[women_history$women == woman1,'opposition2'] <- man1
-  women_history[women_history$women == woman1,'opposition2a'] <- man2
-  
-  women_history[women_history$women == woman2,'opposition2'] <- man1
-  women_history[women_history$women == woman2,'opposition2a'] <- man2
-  
-  print(paste(man1, '&', man2))
-  print(paste(woman1, '&', woman2))
-  
-  rm(man1, man2, woman1, woman2)
-  
+half_one <- partners_draw %>% filter(game ==1) %>% 
+            .[sample(nrow(.),6),]
+
+half_two <- partners_draw %>% filter(game ==1) %>% 
+            setdiff(half_one)
+
+names(half_one) <- c('game1', 'man1', 'woman1')
+names(half_two) <- c('game2', 'man2', 'woman2')
+            
+game_one <- cbind(half_one, half_two) %>%
+              select(man1, woman1, man2, woman2) %>%
+              mutate(game = 1) %>%
+              select(game, man1, woman1, man2, woman2)
+
+### Opposition two
+
+half_one <- partners_draw %>% filter(game ==2) %>% 
+  .[sample(nrow(.),6),]
+
+half_two <- partners_draw %>% filter(game ==2) %>% 
+  setdiff(half_one)
+
+names(half_one) <- c('game1', 'man1', 'woman1')
+names(half_two) <- c('game2', 'man2', 'woman2')
+
+game_two <- cbind(half_one, half_two) %>%
+  select(man1, woman1, man2, woman2) %>%
+  mutate(game = 2) %>%
+  select(game, man1, woman1, man2, woman2)
+
+### Opposition three
+
+half_one <- partners_draw %>% filter(game ==3) %>% 
+  .[sample(nrow(.),6),]
+
+half_two <- partners_draw %>% filter(game ==3) %>% 
+  setdiff(half_one)
+
+names(half_one) <- c('game1', 'man1', 'woman1')
+names(half_two) <- c('game2', 'man2', 'woman2')
+
+game_three <- cbind(half_one, half_two) %>%
+  select(man1, woman1, man2, woman2) %>%
+  mutate(game = 3) %>%
+  select(game, man1, woman1, man2, woman2)
+
+## Joined all together
+final_draw <- rbind(game_one, game_two, game_three)
+
+# Check conditions are met for men
+
+men_counts <- list()
+
+for (i in 1:length(men)) {
+  person_to_check <- men[i]
+
+player <- final_draw %>%
+            filter(man1 == person_to_check | man2 == person_to_check) %>%
+            select(-game)
+
+players_interactions <- c(as.character(player[1,]),
+                          as.character(player[2,]),
+                          as.character(player[3,]))
+
+# remove the player
+players_interactions <- players_interactions[players_interactions != person_to_check]
+
+men_counts[[i]] <- length(unique(players_interactions))
 }
 
-# All back into the hat
-men   <- c(paste0('M', 1:12))
-women <- c(paste0('F', 1:12))
-
-# session three
-while (length(men) > 0 & length(women) > 0) {
-  man1   <- sample(men, 1)
-  woman1 <- sample(women, 1)
-  
-  men   <- men[men != man1]
-  women <- women[women != woman1]
-  
-  # Here. When sample, exclude the previous two partners
-  man2   <- sample(men[men != men_history[men_history$men == man1,]$partner1 & 
-                         men != men_history[men_history$men == man1,]$partner2], 
-                   1)
-  woman2 <- sample(women[women != women_history[women_history$women == woman1,]$partner1 & 
-                           women != women_history[women_history$women == woman1,]$partner2], 
-                   1)
-  
-  men   <- men[men != man2]
-  women <- women[women != woman2]
-  
-  # record partners
-  men_history[men_history$men == man1,'partner3'] <- man2
-  men_history[men_history$men == man2,'partner3'] <- man1
-  
-  women_history[women_history$women == woman1,'partner3'] <- woman2
-  women_history[women_history$women == woman2,'partner3'] <- woman1
-  
-  # record oppositions
-  men_history[men_history$men == man1,'opposition3']  <- woman1
-  men_history[men_history$men == man1,'opposition3a'] <- woman2
-  
-  men_history[men_history$men == man2,'opposition3']  <- woman1
-  men_history[men_history$men == man2,'opposition3a'] <- woman2
-  
-  women_history[women_history$women == woman1,'opposition3'] <- man1
-  women_history[women_history$women == woman1,'opposition3a'] <- man2
-  
-  women_history[women_history$women == woman2,'opposition3'] <- man1
-  women_history[women_history$women == woman2,'opposition3a'] <- man2
-  
-  print(paste(man1, '&', man2))
-  print(paste(woman1, '&', woman2))
-  
-  rm(man1, man2, woman1, woman2)
-  
+if (sum(unlist(men_counts)) == 96){
+  men_satisfied <- 'Y'
+} else {
+  men_satisfied <- 'N'
 }
 
-## Now figure out who plays who
-## Start with the table. First man. Draw against random woman, and so on.
-#Roudn two, similar, but check didn't play them before.
+# Check conditions are met for the women
+
+women_counts <- list()
+
+for (i in 1:length(women)) {
+  person_to_check <- women[i]
+  
+  player <- final_draw %>%
+    filter(woman1 == person_to_check | woman2 == person_to_check) %>%
+    select(-game)
+  
+  players_interactions <- c(as.character(player[1,]),
+                            as.character(player[2,]),
+                            as.character(player[3,]))
+  
+  # remove the player
+  players_interactions <- players_interactions[players_interactions != person_to_check]
+  
+  women_counts[[i]] <- length(unique(players_interactions))
+}
+
+if (sum(unlist(women_counts)) == 96){
+  women_satisfied <- 'Y'
+} else {
+  women_satisfied <- 'N'
+}
+
+print(iteration)
+
+iteration <- iteration + 1
+
+}
